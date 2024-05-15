@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop With Morals</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"> <!-- Water.css theme -->
+</head>
+<body>
+    <header>
+        <h1>Shop With Morals</h1>
+        <div class="dark-mode-toggle" onclick="toggleDarkMode()">Toggle Dark Mode</div>
+    </header>
+    <main>
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-bar" placeholder="Search products...">
+        </div>
+        <div class="product-list" id="productList"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/meilisearch@0.22.0/dist/meilisearch.umd.min.js" async></script>
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const productList = document.getElementById('productList');
+
+        // Sample product data
+        const products = [
+            { id: 1, name: 'Product A', price: 20.99 },
+            { id: 2, name: 'Product B', price: 15.50 },
+            { id: 3, name: 'Product C', price: 35.75 },
+            // Add more products here...
+        ];
+
+        // Initialize Meilisearch client
+        const client = new Meilisearch({
+            indexUid: 'products', // Replace with your index name
+            url: 'http://localhost:7700', // Local Meilisearch instance URL
+            primaryKey: 'id', // Set the primary key for the index
+        });
+
+        // Create the index and add documents
+        async function createIndexAndAddDocuments() {
+            try {
+                const index = await client.getOrCreateIndex('products'); // Create or get the index
+                await index.addDocuments(products); // Add sample product data to the index
+            } catch (error) {
+                console.error('Error creating index or adding documents:', error);
+            }
+        }
+
+        // Search function
+        async function performSearch(query) {
+            try {
+                const index = client.index('products'); // Use the client to get the index
+                const searchResults = await index.search(query);
+                return searchResults.hits;
+            } catch (error) {
+                console.error('Error fetching search results:', error);
+                return [];
+            }
+        }
+
+        // Display search results
+        async function displayResults(query) {
+            const results = await performSearch(query);
+            productList.innerHTML = '';
+
+            if (results.length === 0) {
+                productList.innerHTML = '<p>No products found.</p>';
+            } else {
+                results.forEach(product => {
+                    const productItem = document.createElement('div');
+                    productItem.classList.add('product-item'); // Add a class for styling
+                    productItem.innerHTML = `<strong>${product.name}</strong> - ${product.price.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+                    productList.appendChild(productItem);
+                });
+            }
+        }
+
+        // Event listener for search input
+        searchInput.addEventListener('input', () => {
+            const searchQuery = searchInput.value.trim();
+            displayResults(searchQuery);
+        });
+
+        // Initial display (optional)
+        displayResults('');
+
+        // Dark mode toggle function
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        // Create the index and add documents when the page loads
+        window.onload = createIndexAndAddDocuments;
+    </script>
+</body>
+</html>
